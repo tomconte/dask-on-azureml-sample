@@ -90,7 +90,29 @@ You can then track the execution of the job in the Azure ML Studio.
 
 ## Accessing the Dask dashboard
 
-TBD
+The Dask dashboard is very useful to understand what is going on in the cluster. This sample shows a way of accessing the dashboard using SSH tunnels.
+
+- Once the script is running, you can find the job in the Azure ML Jobs list.
+- Click on the job name to open the job page.
+- Click on "Outputs + logs" to access the logs of the job.
+- Open the `user_logs` directory. You will see one log per MPI process, in the form `std_log_process_xx.txt`.
+- Open the log named `std_log_process_01.txt`, this is where you will find the logs written by the script running on the MPI process of rank 1.
+- In this log you will see a line like this: `Dask dashboard on 10.0.0.8:8787`; this gives you the internal IP address of the host where the Dask dashboard is running.
+
+Now you need to open an SSH tunnel between your workstation and the host, so that you can access the dashboard. To do that, you will find the public IP address of your cluster, and use it to open the tunnel.
+
+- In the Azure ML Studio, go to the "Compute" page.
+- Click on "Compute Clusters".
+- Click on your cluster name, for example `dask-cluster`.
+- Click on Nodes. You will see a list of nodes in your cluster. Each node has a "Connection string" value with a clipboard icon. Click on the clickboard icon of any line to get the SSH command to connect to the cluster. It will look like `ssh azureuser@20.a.b.c -p 50003`.
+
+To create the SSH tunnel, use the `-L` argument to indicate that you want to forward the connection from local port 8787 to the remote port, using the information from the logs. The final command should look like this:
+
+```sh
+ssh azureuser@20.a.b.c -p 50003 -L 8787:10.0.0.8:8787
+```
+
+Run that command, and the tunnel should be established. Connect to `http://localhost:8787/status` with your browser to access the dashboard.
 
 ## Implementation
 

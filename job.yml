@@ -1,0 +1,23 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+
+display_name: gbif-job
+experiment_name: gbif
+description: GBIF data preparation job
+
+environment: azureml:dask-mpi@latest
+
+compute: azureml:dask-cluster
+
+outputs:
+  gbif_output:
+
+distribution:
+  type: mpi
+  process_count_per_instance: 8
+resources:
+  instance_count: 6
+
+code: src
+
+command: >-
+  python preprocess_gbif.py --output_path ${{outputs.gbif_output}}

@@ -1,0 +1,12 @@
+dependencies:
+  - python=3.8
+  - pip:
+    - dask[complete]
+    - dask_geopandas
+    - dask_mpi
+    - mpi4py
+    - pyarrow
+    - adlfs
+    - planetary-computer
+    - pystac-client
+name: dask-mpi

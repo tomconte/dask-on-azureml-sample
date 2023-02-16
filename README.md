@@ -114,6 +114,16 @@ ssh azureuser@20.a.b.c -p 50003 -L 8787:10.0.0.8:8787
 
 Run that command, and the tunnel should be established. Connect to `http://localhost:8787/status` with your browser to access the dashboard.
 
-## Implementation
+## How it works
 
-TBD
+The following two lines are enough to set up the Dask cluster over MPI:
+
+```python
+# Initialize Dask over MPI
+dask_mpi.initialize()
+c = Client()
+```
+
+This will automatically run the Dask Scheduler on the MPI process with rank 0, the client code on rank 1, and the Dask Workers on the remaining ranks. This means that out of all the distributed processes you requested in your Azure ML job, two are used to coordinate the cluster, and the others to perform the compute tasks.
+
+You can read more in the Dask-MPI documentation: [Dask-MPI with Batch Jobs](https://mpi.dask.org/en/latest/batch.html) and [How Dask-MPI Works](https://mpi.dask.org/en/latest/howitworks.html).

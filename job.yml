@@ -1,23 +1,29 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
 
-display_name: gbif-job
-experiment_name: gbif
-description: GBIF data preparation job
+display_name: dask-job
+experiment_name: azureml-dask
+description: Dask data preparation job
 
 environment: azureml:dask-mpi@latest
 
 compute: azureml:dask-cluster
 
+inputs:
+  nyc_taxi_dataset:
+    path: wasbs://datasets@azuremlexamples.blob.core.windows.net/nyctaxi/
+    mode: ro_mount
+
 outputs:
-  gbif_output:
+  output_folder:
+    type: uri_folder
 
 distribution:
   type: mpi
   process_count_per_instance: 8
 resources:
-  instance_count: 6
+  instance_count: 4
 
 code: src
 
 command: >-
-  python preprocess_gbif.py --output_path ${{outputs.gbif_output}}
+  python prep_nyctaxi.py --nyc_taxi_dataset ${{inputs.nyc_taxi_dataset}} --output_folder ${{outputs.output_folder}}

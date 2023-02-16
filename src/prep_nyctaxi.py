@@ -1,0 +1,218 @@
+import argparse
+import os
+import time
+from pathlib import Path
+
+import dask.dataframe as dd
+import dask_mpi
+import mlflow
+from dask.distributed import Client
+
+# if running in a notebook, uncomment these 2 lines
+# import sys
+# sys.argv = ['']
+
+for k, v in os.environ.items():
+    if k.startswith("MLFLOW"):
+        print(k, v)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--nyc_taxi_dataset")
+parser.add_argument("--output_folder")
+args = parser.parse_args()
+dataset = args.nyc_taxi_dataset
+output_path = args.output_folder
+
+print(f"dataset location: {dataset}")
+os.system(f"find {dataset}")
+print(f"output location: {output_path}")
+
+# Initialize Dask over MPI
+dask_mpi.initialize()
+c = Client()
+
+print(c)
+mlflow.log_text(str(c), "dask_cluster1")
+
+# read in the data from the provided file dataset (which is mounted at the same
+# location on all nodes of the job)
+df = dd.read_csv(
+    f"{dataset}/*.csv", parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"]
+)
+
+print(df.head())
+mlflow.log_text(str(df.head()), "df.head")
+
+# list of column names that need to be re-mapped
+remap = {}
+remap["tpep_pickup_datetime"] = "pickup_datetime"
+remap["tpep_dropoff_datetime"] = "dropoff_datetime"
+remap["RatecodeID"] = "rate_code"
+
+# create a list of columns & dtypes the df must have
+must_haves = {
+    "VendorID": "object",
+    "pickup_datetime": "datetime64[ms]",
+    "dropoff_datetime": "datetime64[ms]",
+    "passenger_count": "int32",
+    "trip_distance": "float32",
+    "pickup_longitude": "float32",
+    "pickup_latitude": "float32",
+    "rate_code": "int32",
+    "payment_type": "int32",
+    "dropoff_longitude": "float32",
+    "dropoff_latitude": "float32",
+    "fare_amount": "float32",
+    "tip_amount": "float32",
+    "total_amount": "float32",
+}
+
+query_frags = [
+    "fare_amount > 0 and fare_amount < 500",
+    "passenger_count > 0 and passenger_count < 6",
+    "pickup_longitude > -75 and pickup_longitude < -73",
+    "dropoff_longitude > -75 and dropoff_longitude < -73",
+    "pickup_latitude > 40 and pickup_latitude < 42",
+    "dropoff_latitude > 40 and dropoff_latitude < 42",
+]
+query = " and ".join(query_frags)
+
+# helper function which takes a DataFrame partition
+def clean(df_part, remap, must_haves, query):
+    df_part = df_part.query(query)
+
+    # some col-names include pre-pended spaces remove & lowercase column names
+    # tmp = {col:col.strip().lower() for col in list(df_part.columns)}
+
+    # rename using the supplied mapping
+    df_part = df_part.rename(columns=remap)
+
+    # iterate through columns in this df partition
+    for col in df_part.columns:
+        # drop anything not in our expected list
+        if col not in must_haves:
+            df_part = df_part.drop(col, axis=1)
+            continue
+
+        if df_part[col].dtype == "object" and col in [
+            "pickup_datetime",
+            "dropoff_datetime",
+        ]:
+            df_part[col] = df_part[col].astype("datetime64[ms]")
+            continue
+
+        # if column was read as a string, recast as float
+        if df_part[col].dtype == "object":
+            df_part[col] = df_part[col].str.fillna("-1")
+            df_part[col] = df_part[col].astype("float32")
+        else:
+            # save some memory by using 32 bit floats
+            if "int" in str(df_part[col].dtype):
+                df_part[col] = df_part[col].astype("int32")
+            if "float" in str(df_part[col].dtype):
+                df_part[col] = df_part[col].astype("float32")
+            df_part[col] = df_part[col].fillna(-1)
+
+    return df_part
+
+
+import math
+from math import pi
+
+import numpy as np
+from dask.array import arcsin, cos, floor, sin, sqrt
+
+
+def haversine_distance(
+    pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude
+):
+    x_1 = pi / 180 * pickup_latitude
+    y_1 = pi / 180 * pickup_longitude
+    x_2 = pi / 180 * dropoff_latitude
+    y_2 = pi / 180 * dropoff_longitude
+
+    dlon = y_2 - y_1
+    dlat = x_2 - x_1
+    a = sin(dlat / 2) ** 2 + cos(x_1) * cos(x_2) * sin(dlon / 2) ** 2
+
+    c = 2 * arcsin(sqrt(a))
+    r = 6371  # Radius of earth in kilometers
+
+    return c * r
+
+
+def day_of_the_week(day, month, year):
+    if month < 3:
+        shift = month
+    else:
+        shift = 0
+    Y = year - (month < 3)
+    y = Y - 2000
+    c = 20
+    d = day
+    m = month + shift + 1
+    return (d + floor(m * 2.6) + y + (y // 4) + (c // 4) - 2 * c) % 7
+
+
+def add_features(df):
+    df["hour"] = df["pickup_datetime"].dt.hour.astype("int32")
+    df["year"] = df["pickup_datetime"].dt.year.astype("int32")
+    df["month"] = df["pickup_datetime"].dt.month.astype("int32")
+    df["day"] = df["pickup_datetime"].dt.day.astype("int32")
+    df["day_of_week"] = df["pickup_datetime"].dt.weekday.astype("int32")
+
+    df["diff"] = df["dropoff_datetime"] - df["pickup_datetime"]
+
+    df["pickup_latitude_r"] = (df["pickup_latitude"] // 0.01 * 0.01).astype("float32")
+    df["pickup_longitude_r"] = (df["pickup_longitude"] // 0.01 * 0.01).astype("float32")
+    df["dropoff_latitude_r"] = (df["dropoff_latitude"] // 0.01 * 0.01).astype("float32")
+    df["dropoff_longitude_r"] = (df["dropoff_longitude"] // 0.01 * 0.01).astype(
+        "float32"
+    )
+
+    # df = df.drop('pickup_datetime', axis=1)
+    # df = df.drop('dropoff_datetime', axis=1)
+    import numpy
+
+    df["h_distance"] = haversine_distance(
+        df["pickup_latitude"],
+        df["pickup_longitude"],
+        df["dropoff_latitude"],
+        df["dropoff_longitude"],
+    ).astype("float32")
+
+    df["is_weekend"] = (df["day_of_week"] > 5).astype("int32")
+    return df
+
+
+taxi_df = clean(df, remap, must_haves, query)
+taxi_df = add_features(taxi_df)
+
+print(c)
+mlflow.log_text(str(c), "dask_cluster2")
+
+# In this case, we are not using a mounted drive to save the job's output
+# but save to the ./outputs folder, which is on the nodes local drives.
+# Each node will save its partitions to the local outputs folder.
+# AzureML will collect these files and copy them to the job's output location
+# on blob storage.
+
+print("save parquet to ", output_path)
+
+start_time = time.time()
+
+taxi_df.to_parquet(output_path)
+
+# for debug, show output folders on all nodes
+def list_output():
+    return os.listdir(output_path)
+
+print(c.run(list_output))
+
+elapsed_time = time.time() - start_time
+mlflow.log_metric("time_saving_seconds", elapsed_time)
+
+print("done")
+print(c)
+
+os.system("ls -alg " + output_path)

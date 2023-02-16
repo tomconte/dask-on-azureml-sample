@@ -88,6 +88,10 @@ az ml job create -g $GROUP -w $WORKSPACE --file job.yml
 
 You can then track the execution of the job in the Azure ML Studio.
 
+## Accessing the Dask dashboard
+
+TBD
+
 ## Implementation
 
 TBD

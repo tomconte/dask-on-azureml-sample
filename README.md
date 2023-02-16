@@ -4,9 +4,9 @@ This sample shows how to run a Dask data preparation task on an Azure ML Compute
 
 ## Pre-requisistes
 
-To use this sample, you will need to create an Azure ML Workspace. Please see the documentation for instructions.
+To use this sample, you will need to create an Azure ML Workspace. Please read the documentation for instructions: [Create a workspace](https://learn.microsoft.com/en-us/azure/machine-learning/concept-workspace#create-a-workspace).
 
-We will use the Azure CLI with Azure ML extensions to prepare the platform and run the sample. Please see the documentation for installation instructions.
+We will use the Azure CLI with Azure ML extensions to prepare the platform and run the sample. Please read documentation for installation instructions: [Install and set up the CLI (v2)](https://learn.microsoft.com/en-us/azure/machine-learning/how-to-configure-cli?tabs=public).
 
 To make the example CLI commands more generic, we will use two shell variables:
 
@@ -66,7 +66,7 @@ az ml compute create \
 
 ## Run the sample script
 
-The included `job.yml` contains an Azure ML job definition to execute the script `preprocess_gbif.py`.
+The included `job.yml` contains an Azure ML job definition to execute the script `prep_nyctaxi.py`.
 
 The important part of that file regarding Dask is the following section:
 
@@ -75,10 +75,10 @@ distribution:
   type: mpi
   process_count_per_instance: 8
 resources:
-  instance_count: 6
+  instance_count: 4
 ```
 
-This is were we request to run the script using an MPI cluster of 6 instances (`instance_count`) and 8 processes per instance (`process_count_per_instance`). You should adjust these numbers according to the configuration of your cluster.
+This is were we request to run the script using an MPI cluster of 4 instances (`instance_count`) and 8 processes per instance (`process_count_per_instance`). You should adjust these numbers according to the configuration of your cluster.
 
 Execute the job using the following command:
 

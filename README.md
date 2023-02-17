@@ -1,6 +1,8 @@
 # Dask on Azure ML Compute using MPI
 
-This sample shows how to run a Dask data preparation task on an Azure ML Compute Cluster.
+This sample shows how to run a Dask data preparation task on an Azure ML Compute Cluster, using Dask-MPI. This method leverages the [Azure ML MPI support](https://learn.microsoft.com/en-us/azure/machine-learning/how-to-train-distributed-gpu#mpi) and does not require any custom scripts or additional libraries.
+
+To illustrate Dask usage, the 24 GB NYC Taxi dataset is read in CSV format by a 4-node Dask cluster, processed, and then written as a job output in Parquet format. Because the script uses Dask Dataframes, the compute tasks are distributed across all 4 nodes.
 
 ## Pre-requisistes
 
@@ -79,6 +81,8 @@ resources:
 ```
 
 This is were we request to run the script using an MPI cluster of 4 instances (`instance_count`) and 8 processes per instance (`process_count_per_instance`). You should adjust these numbers according to the configuration of your cluster.
+
+The job also defines inputs and outputs, both mounted directly from Blob Storage to the compute nodes. This means the inputs and outputs will appear on all the nodes as local folders.
 
 Execute the job using the following command:
 

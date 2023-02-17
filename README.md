@@ -50,7 +50,7 @@ The base Docker image specified in the environment creation contains the necessa
 
 We need an Azure ML Compute Cluster to run our script. The command below will create one with the following settings:
 
-- VM size Standard_D8_v3, which is 8vCPU and 32 GiB RAM. See [Supported VM series and sizes](https://learn.microsoft.com/en-us/azure/machine-learning/concept-compute-target#supported-vm-series-and-sizes) for a list of possible options.
+- VM size Standard_D8_v3, which is 8 vCPU and 32 GiB RAM. See [Supported VM series and sizes](https://learn.microsoft.com/en-us/azure/machine-learning/concept-compute-target#supported-vm-series-and-sizes) for a list of possible options.
 - Maximum of 6 instances.
 - Use your current SSH key so you can connect to the nodes.
 
@@ -80,7 +80,7 @@ resources:
   instance_count: 4
 ```
 
-This is were we request to run the script using an MPI cluster of 4 instances (`instance_count`) and 8 processes per instance (`process_count_per_instance`). You should adjust these numbers according to the configuration of your cluster.
+This is where we request to run the script using an MPI cluster of 4 instances (`instance_count`) and 8 processes per instance (`process_count_per_instance`). You should adjust these numbers according to the configuration of your cluster.
 
 The job also defines inputs and outputs, both mounted directly from Blob Storage to the compute nodes. This means the inputs and outputs will appear on all the nodes as local folders.
 

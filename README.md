@@ -108,7 +108,7 @@ Now you need to open an SSH tunnel between your workstation and the host, so tha
 - In the Azure ML Studio, go to the "Compute" page.
 - Click on "Compute Clusters".
 - Click on your cluster name, for example `dask-cluster`.
-- Click on Nodes. You will see a list of nodes in your cluster. Each node has a "Connection string" value with a clipboard icon. Click on the clickboard icon of any line to get the SSH command to connect to the cluster. It will look like `ssh azureuser@20.a.b.c -p 50003`.
+- Click on Nodes. You will see a list of nodes in your cluster. Each node has a "Connection string" value with a clipboard icon. Click on the clipboard icon of any line to get the SSH command to connect to the cluster. It will look like `ssh azureuser@20.a.b.c -p 50003`.
 
 To create the SSH tunnel, use the `-L` argument to indicate that you want to forward the connection from local port 8787 to the remote port, using the information from the logs. The final command should look like this:
 
